@@ -1,6 +1,9 @@
-EXE = libplugin.so
+BUILDDIR = build
+EXE = $(BUILDDIR)/libplugin.so
 
-all: $(EXE)
+DOT_FILES := $(wildcard $(BUILDDIR)/*.dot)
+PNG_DIR := $(BUILDDIR)/png
+PNG_FILES := $(DOT_FILES:$(BUILDDIR)/%.dot=$(PNG_DIR)/%.png )
 
 CC ?= gcc
 CXX ?= g++
@@ -11,18 +14,42 @@ PLUGIN_FLAGS = -I`$(CC) -print-file-name=plugin`/include -Iinclude -g -Wall -fno
 CFLAGS = -g -O3 -Iinclude
 
 # Pointing to the new src/ directory
-SRCS = src/plugin.cpp src/mpi_collectives.cpp src/graphviz.cpp
-OBJS = $(SRCS:.cpp=.o)
+SRCS := $(wildcard src/*.cpp)
+SRC_FILES = $(SRCS:src/%=%)
+SRC_DIR = src/
+OBJS = $(SRC_FILES:%.cpp=$(BUILDDIR)/%.o)
 
+
+.PHONY: clean cleanall tests dot2png
+
+TEST_SRCS := $(wildcard tests/test*.c)
+TEST_SRCS_FILE := $(TEST_SRCS:tests/%=%)
+TESTS := $(TEST_SRCS_FILE:%.c=$(BUILDDIR)/%)
+
+all: $(EXE)
+	# @echo -e "$(OBJS)"
+	# @echo -e "$(SRCS)"
+	# @echo -e "$(SRC_FILES)"
+	@echo -e "$(PNG_FILES)"
+	@echo -e "$(PNG_DIR)"
+	@echo -e "$(DOT_FILES)"
+	@echo -e "coucou"
+	@echo -e $(DOT_FILES)
+	@echo -e $(PNG_DIR)
+	@echo -e $(PNG_FILES)
+	@echo "%%%%%%%%%%%%%%%%%%%"
+	@echo -e $(TEST_SRCS)
+	@echo -e $(TEST_SRCS_FILE)
+	@echo -e $(TESTS)
 
 help: 
-	@echo "Default target : compile plugin into a shared lib libplugin.so."
-	@echo "debug : add DEBUG flag to compilation which trigger .dot file generation. .dot files representes Control Flow Graph (CFG), can be converted to png with dot2png target."
-	@echo "test  : compile test source files with the plugin enabled to test it."
-	@echo "test-{fail,pass}-{1,2} : compile specific file to test the plugin."
-	@echo "dot2png : generate png file from .dot file."
-	@echo "clean : clean compiled source file."
-	@echo "cleanall : clean target + png / dot files."
+	@echo "Usage : "
+	@echo -e "\t - Default target : compile plugin into a shared lib libplugin.so."
+	@echo -e "\t - debug : Compile the plugin with DEBUG flag which trigger .dot file generation. .dot files representes Control Flow Graph (CFG), can be converted to png with dot2png target."
+	@echo -e "\t - test  : compile test source files with the plugin enabled to test it."
+	@echo -e "\t - test-{fail,pass}-{1,2} : compile specific file to test the plugin."
+	@echo -e "\t - dot2png : generate png file from .dot file."
+	@echo -e "\t - clean : clean the repo."
 
 
 
@@ -32,7 +59,7 @@ debug: clean $(EXE)
 	@echo "Build debug done"
 
 # Generic rule to build objects from the src folder
-src/%.o: src/%.cpp
+$(BUILDDIR)/%.o: src/%.cpp
 	$(CXX) $(PLUGIN_FLAGS) -c -o $@ $<
 
 $(EXE): $(OBJS)
@@ -42,25 +69,18 @@ $(EXE): $(OBJS)
 ## Tests ####
 #############
 
-TEST_SRCS := $(wildcard tests/test*.c)
-TESTS := $(patsubst tests/%.c,%,$(TEST_SRCS))
 
-.PHONY: clean cleanall tests dot2png
 
 # Build all tests
 tests: $(TESTS) 
 
 # Generic build rule for tests inside the tests/ directory
-test-%: tests/test-%.c $(EXE)
+$(BUILDDIR)/test-%: tests/test-%.c $(EXE)
 	$(CC) $< $(CFLAGS) -o $@ -fplugin=./$(EXE) -lmpi
 	
 ##########
 ## DOTS ##
 ##########
-
-DOT_FILES := $(wildcard *.dot)
-PNG_DIR := png
-PNG_FILES := $(patsubst %.dot,$(PNG_DIR)/%.png,$(DOT_FILES))
 
 dot2png: $(PNG_FILES)
 
@@ -69,7 +89,7 @@ $(PNG_DIR):
 	mkdir -p $(PNG_DIR)
 
 # Rule to generate png/filename.png from filename.dot
-$(PNG_DIR)/%.png: %.dot | $(PNG_DIR)
+$(PNG_DIR)/%.png: $(BUILDDIR)/%.dot | $(PNG_DIR)
 	dot -T png $< -o $@
 
 ###########
@@ -77,7 +97,5 @@ $(PNG_DIR)/%.png: %.dot | $(PNG_DIR)
 ###########
 
 clean:
-	rm -f $(EXE) $(TESTS) src/*.o
+	rm -rvf $(EXE) $(TESTS) src/*.o $(BUILDDIR)/* *.dot $(PNG_DIR)
 
-cleanall: clean
-	rm -rf *.dot $(PNG_DIR)
