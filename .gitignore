@@ -1,0 +1,16 @@
+# Build artifacts
+*.so
+*.o
+
+# Test binaries (built by make test-*)
+test-fail-1
+test-fail-2
+test-pass-1
+test-pass-2
+
+# Debug Graphviz output
+*.dot
+png/
+
+# Local environment setup (contains machine-specific paths)
+setenv.sh
