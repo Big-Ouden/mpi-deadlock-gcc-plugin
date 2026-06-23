@@ -22,25 +22,8 @@ OBJS = $(SRC_FILES:%.cpp=$(BUILDDIR)/%.o)
 
 .PHONY: clean cleanall tests dot2png
 
-TEST_SRCS := $(wildcard tests/test*.c)
-TEST_SRCS_FILE := $(TEST_SRCS:tests/%=%)
-TESTS := $(TEST_SRCS_FILE:%.c=$(BUILDDIR)/%)
-
 all: $(EXE)
-	# @echo -e "$(OBJS)"
-	# @echo -e "$(SRCS)"
-	# @echo -e "$(SRC_FILES)"
-	@echo -e "$(PNG_FILES)"
-	@echo -e "$(PNG_DIR)"
-	@echo -e "$(DOT_FILES)"
-	@echo -e "coucou"
-	@echo -e $(DOT_FILES)
-	@echo -e $(PNG_DIR)
-	@echo -e $(PNG_FILES)
-	@echo "%%%%%%%%%%%%%%%%%%%"
-	@echo -e $(TEST_SRCS)
-	@echo -e $(TEST_SRCS_FILE)
-	@echo -e $(TESTS)
+
 
 help: 
 	@echo "Usage : "
@@ -50,8 +33,10 @@ help:
 	@echo -e "\t - test-{fail,pass}-{1,2} : compile specific file to test the plugin."
 	@echo -e "\t - dot2png : generate png file from .dot file."
 	@echo -e "\t - clean : clean the repo."
+	
 
-
+$(BUILDDIR):
+	mkdir -p $(BUILDDIR)
 
 debug: PLUGIN_FLAGS += -DDEBUG
 debug: CFLAGS += -DDEBUG
@@ -59,7 +44,7 @@ debug: clean $(EXE)
 	@echo "Build debug done"
 
 # Generic rule to build objects from the src folder
-$(BUILDDIR)/%.o: src/%.cpp
+$(BUILDDIR)/%.o: src/%.cpp | $(BUILDDIR)
 	$(CXX) $(PLUGIN_FLAGS) -c -o $@ $<
 
 $(EXE): $(OBJS)
@@ -69,13 +54,15 @@ $(EXE): $(OBJS)
 ## Tests ####
 #############
 
-
+TEST_SRCS := $(wildcard tests/test*.c)
+TEST_SRCS_FILE := $(TEST_SRCS:tests/%=%)
+TESTS := $(TEST_SRCS_FILE:%.c=$(BUILDDIR)/%)
 
 # Build all tests
 tests: $(TESTS) 
 
 # Generic build rule for tests inside the tests/ directory
-$(BUILDDIR)/test-%: tests/test-%.c $(EXE)
+$(BUILDDIR)/test-%: tests/test-%.c $(EXE) | $(BUILDDIR)
 	$(CC) $< $(CFLAGS) -o $@ -fplugin=./$(EXE) -lmpi
 	
 ##########
@@ -97,5 +84,5 @@ $(PNG_DIR)/%.png: $(BUILDDIR)/%.dot | $(PNG_DIR)
 ###########
 
 clean:
-	rm -rvf $(EXE) $(TESTS) src/*.o $(BUILDDIR)/* *.dot $(PNG_DIR)
+	rm -rvf $(EXE) $(TESTS) src/*.o $(BUILDDIR) *.dot $(PNG_DIR)
 
