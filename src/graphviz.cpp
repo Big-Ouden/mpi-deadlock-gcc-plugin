@@ -1,5 +1,5 @@
-#include "graphviz.h"
-#include "mpi_collectives.h"
+#include "../include/graphviz.h"
+#include "../include/mpi_collectives.h"
 
 /* Build a filename (as a string) based on function name */
 char *cfgviz_generate_filename(function *fun, const char *suffix) {

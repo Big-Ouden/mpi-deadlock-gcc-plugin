@@ -1,61 +1,59 @@
-EXE=libplugin.so
+EXE = libplugin.so
 
 all: $(EXE)
 
-
-
 CC ?= gcc
 CXX ?= g++
+MPICC = mpicc
 
-MPICC=mpicc
+# Added -Iinclude to resolve header files in the new directory
+PLUGIN_FLAGS = -I`$(CC) -print-file-name=plugin`/include -Iinclude -g -Wall -fno-rtti -fPIC 
+CFLAGS = -g -O3 -Iinclude
 
-PLUGIN_FLAGS=-I`$(CC) -print-file-name=plugin`/include -g -Wall -fno-rtti -fPIC 
+# Pointing to the new src/ directory
+SRCS = src/plugin.cpp src/mpi_collectives.cpp src/graphviz.cpp
+OBJS = $(SRCS:.cpp=.o)
 
 
-CFLAGS=-g -O3
-
-OBJS=plugin.o \
-	 mpi_collectives.o \
-	 graphviz.o
+help: 
+	@echo "Default target : compile plugin into a shared lib libplugin.so."
+	@echo "debug : add DEBUG flag to compilation which trigger .dot file generation. .dot files representes Control Flow Graph (CFG), can be converted to png with dot2png target."
+	@echo "test  : compile test source files with the plugin enabled to test it."
+	@echo "test-{fail,pass}-{1,2} : compile specific file to test the plugin."
+	@echo "dot2png : generate png file from .dot file."
+	@echo "clean : clean compiled source file."
+	@echo "cleanall : clean target + png / dot files."
 
 
 
 debug: PLUGIN_FLAGS += -DDEBUG
 debug: CFLAGS += -DDEBUG
-debug: clean libplugin.so
+debug: clean $(EXE)
 	@echo "Build debug done"
 
-
-
-
-%.o: %.cpp %.h
+# Generic rule to build objects from the src folder
+src/%.o: src/%.cpp
 	$(CXX) $(PLUGIN_FLAGS) -c -o $@ $<
 
-libplugin.so: $(OBJS)
+$(EXE): $(OBJS)
 	$(CXX) -shared -o $@ $^
 
 #############
 ## Tests ####
 #############
 
+TEST_SRCS := $(wildcard tests/test*.c)
+TESTS := $(patsubst tests/%.c,%,$(TEST_SRCS))
 
-
-TEST_SRCS := $(wildcard test*.c)
-TESTS := $(TEST_SRCS:.c=)
-
-
-.PHONY: clean cleanall 
-
+.PHONY: clean cleanall tests dot2png
 
 # Build all tests
 tests: $(TESTS) 
 
-# Generic build rule: testN depends on testN.c
-test%: test%.c libplugin.so 
-	$(CC) $< $(CFLAGS) -o $@ -fplugin=./libplugin.so -lmpi
+# Generic build rule for tests inside the tests/ directory
+test-%: tests/test-%.c $(EXE)
+	$(CC) $< $(CFLAGS) -o $@ -fplugin=./$(EXE) -lmpi
 	
-
-
 ##########
 ## DOTS ##
 ##########
@@ -64,9 +62,7 @@ DOT_FILES := $(wildcard *.dot)
 PNG_DIR := png
 PNG_FILES := $(patsubst %.dot,$(PNG_DIR)/%.png,$(DOT_FILES))
 
-
-
-dot2png:  $(PNG_FILES)
+dot2png: $(PNG_FILES)
 
 # Ensure png/ directory exists
 $(PNG_DIR):
@@ -76,18 +72,12 @@ $(PNG_DIR):
 $(PNG_DIR)/%.png: %.dot | $(PNG_DIR)
 	dot -T png $< -o $@
 
-
 ###########
 ## CLEAN ##
 ###########
 
-
-
 clean:
-	rm -rf $(EXE)
-	rm -rf $(TESTS)
-	rm -rf *.o
-
+	rm -f $(EXE) $(TESTS) src/*.o
 
 cleanall: clean
-	rm -rf *.dot $(PNG_FILES)
+	rm -rf *.dot $(PNG_DIR)

@@ -1,5 +1,5 @@
-#include "plugin.h"
-#include "mpi_collectives.h"
+#include "../include/plugin.h"
+#include "../include/mpi_collectives.h"
 #include <diagnostic-core.h>
 #include <errors.h>
 #include <queue>
@@ -9,7 +9,7 @@
 
 using namespace std;
 
-// Point d'entrée du plugin
+// Entrypoint of the plugin 
 int plugin_init(struct plugin_name_args *plugin_info,
                 struct plugin_gcc_version *version) {
   my_pass pass(g);
@@ -48,7 +48,7 @@ void reset_bb(basic_block bb) {
   bb->flags = 0;
 }
 
-// Regarde s'il y a plusieurs collectives MPI dans un basic_block
+// Look if there is multiple MPI collective in a basic_block
 bool has_multiple_mpi_calls(basic_block bb) {
   int n = 0;
   FOR_EACH_BB_FN(bb, cfun) {
@@ -65,8 +65,7 @@ bool has_multiple_mpi_calls(basic_block bb) {
   return false;
 }
 
-// Remplit la bitmap frontiers avec les  frontières de post-dominance de chaque
-// noeuds.
+// Fill frontiers bitmap with post-dominance frontiers of each nodes.
 void compute_post_dominance_frontiers(bitmap_head *frontiers) {
   calculate_dominance_info(CDI_POST_DOMINATORS);
   edge p;
@@ -90,7 +89,7 @@ void compute_post_dominance_frontiers(bitmap_head *frontiers) {
   free_dominance_info(CDI_POST_DOMINATORS);
 }
 
-// Supprime les boucles du cfg et le copie dans une bitmap
+// Remove cfg's loop and copy it in a bitmap. 
 void remove_loops_cfg(bitmap_head *cfg) {
   edge p;
   edge_iterator ei;
@@ -105,7 +104,7 @@ void remove_loops_cfg(bitmap_head *cfg) {
   }
 }
 
-// Sépare les basic_block avec plusieurs collectives MPI
+// Split basic_block with multiple MPI collectives.
 void split_cfg() {
   basic_block bb;
 
@@ -150,7 +149,7 @@ bitmap_head *make_cfg_bitmap() {
   return cfg;
 }
 
-// Récupère un basic_block à partir de son index
+// Get a basic_block from its index.
 basic_block bb_of_index(int i) {
   basic_block bb;
   FOR_ALL_BB_FN(bb, cfun) {
@@ -161,7 +160,7 @@ basic_block bb_of_index(int i) {
   return bb;
 }
 
-// Effectue un parcours en profondeur permettant de calculer le rang
+// Run a DFS to compute the rank.
 unordered_map<int, unordered_map<int, set<int>>>
 dfs(bitmap_head *cfg, int v, unordered_map<int, bool> discovered,
     unordered_map<int, unordered_map<int, set<int>>> map) {
@@ -176,8 +175,9 @@ dfs(bitmap_head *cfg, int v, unordered_map<int, bool> discovered,
       bitmap_head *v_head = &cfg[v];
       bitmap_iterator bi;
       unsigned bit_no;
-      //  Début du code préfixe
-      //  Calcul du rang
+
+      //  Start of prefix code
+      //  Rank computing
       enum mpi_collective_code code = LAST_AND_UNUSED_MPI_COLLECTIVE_CODE;
       basic_block bb = bb_of_index(v);
       bool check = false;
@@ -186,7 +186,7 @@ dfs(bitmap_head *cfg, int v, unordered_map<int, bool> discovered,
         code = get_mpi_call_code(stmt);
         if (code != LAST_AND_UNUSED_MPI_COLLECTIVE_CODE) {
           check = true;
-          // Est-ce-que MAP[RANK] existe ?
+          // Does MAP[RANK] exists ?
           if (map.find(rank) == map.end()) {
             unordered_map<int, set<int>> m2;
             map[rank] = m2;
@@ -195,7 +195,7 @@ dfs(bitmap_head *cfg, int v, unordered_map<int, bool> discovered,
         }
       }
 
-      // Fin code préfixe
+      // End of prefix code
       EXECUTE_IF_SET_IN_BITMAP(v_head, 0, bit_no, bi) {
         s.push_back({check ? rank + 2 : rank, (int)bit_no});
       }
@@ -212,7 +212,7 @@ make_mpi_rank_set(bitmap_head *cfg) {
   return map;
 }
 
-// Calcule la frontière de post-dominance d'un ensemble (cf. algo1 dans rapport)
+// Compute post-dominance frontier of a Set (cf. algo1 in report.pdf)
 set<int> union_pdf(set<int> v, bitmap_head *frontiers, bitmap_head *cfg) {
   set<int> res;
   set<int> all_nodes;
@@ -229,7 +229,7 @@ set<int> union_pdf(set<int> v, bitmap_head *frontiers, bitmap_head *cfg) {
     int x = a_traiter.front();
     basic_block parent = bb_of_index(x);
     a_traiter.pop();
-    // On vérifie que tous les successeurs de parent sont dans all_nodes
+    // We verify that all successors of parent are in all_nodes
     edge e;
     edge_iterator ei;
     bool check = true;
@@ -240,7 +240,7 @@ set<int> union_pdf(set<int> v, bitmap_head *frontiers, bitmap_head *cfg) {
     }
     if (check) {
       all_nodes.insert(parent->index);
-      // On ajoute les parents du parent dans a_traiter
+      // Add parents of parent in a_traiter
       FOR_EACH_EDGE(e, ei, parent->preds) { a_traiter.push(e->src->index); }
 
     } else {
@@ -251,11 +251,11 @@ set<int> union_pdf(set<int> v, bitmap_head *frontiers, bitmap_head *cfg) {
   return res;
 }
 
-// Calcule la pdf itéré d'un ensemble
+// Compute iterated PDF of a Set
 set<int> pdf_itere(set<int> v, bitmap_head *frontiers, bitmap_head *cfg) {
   set<int> prev;
   v = union_pdf(v, frontiers, cfg);
-  // On itere tant que la pdf n'est pas stable
+  // We iterate until PDF is stable
   while (prev != v) {
     prev = v;
     set<int> temp = union_pdf(v, frontiers, cfg);
@@ -264,7 +264,7 @@ set<int> pdf_itere(set<int> v, bitmap_head *frontiers, bitmap_head *cfg) {
   return v;
 }
 
-// Affiche des warnings pour chaque lignes source de deadlock potentiel
+// Print warnings for each lines source of the potential deadlock
 void print_warning(const unordered_map<int, unordered_map<int, set<int>>> &map,
                    bitmap_head *frontiers, bitmap_head *cfg) {
   for (const auto &[rank, m2] : map) {
@@ -291,8 +291,8 @@ void print_warning(const unordered_map<int, unordered_map<int, set<int>>> &map,
   }
 }
 
-// Fonction principale du plugin
-// Corps de la passe
+// Main function of the plugin
+// Body of the pass
 unsigned int my_pass::execute(function *fun) {
   basic_block bb;
   bitmap_head *mpi_calls;
@@ -301,27 +301,27 @@ unsigned int my_pass::execute(function *fun) {
   mpi_calls = XNEWVEC(bitmap_head, last_basic_block_for_fn(cfun));
   df_list = XNEWVEC(bitmap_head, last_basic_block_for_fn(cfun));
 
-  // Initialisation des bitmaps
+  // Bitmap initialization
   FOR_ALL_BB_FN(bb, cfun) {
     bitmap_initialize(&mpi_calls[bb->index], &bitmap_default_obstack);
     bitmap_initialize(&df_list[bb->index], &bitmap_default_obstack);
   }
 
-  // Calcul des frontières de post-dominance
+  // PDF computing
   compute_post_dominance_frontiers(df_list);
   free_dominance_info(CDI_POST_DOMINATORS);
 
-  // On retire les back-edge du cfg
+  // Remove CFG's back-edges
   bitmap_head *cfg = make_cfg_bitmap();
   remove_loops_cfg(cfg);
 
-  // Calcul du rang des collectives
+  // Collectives rank computing
   unordered_map<int, unordered_map<int, set<int>>> map = make_mpi_rank_set(cfg);
-  // Affichages des warnings (s'il y en a)
+  // Warnings printing (if there are ones)
   print_warning(map, df_list, cfg);
 
 #ifdef DEBUG
-  // Génération du fichier Graphviz
+  // Graphviz file generation
   cfgviz_dump(fun, "_cfg");
   iter_all_bb(fun, reset_bb);
 
