@@ -8,13 +8,53 @@ A GCC compiler plugin (v12.2.0) designed to detect potential deadlocks in MPI ap
 * **MPI:** `mpicc` must be installed and in your PATH.
 * **Graphviz:** Optional, used to generate `.dot` and `.png` visual representations of the CFGs.
 
+## File tree 
+
+```bash
+.
+├── include
+│   ├── graphviz.h
+│   ├── MPI_collectives.def
+│   ├── mpi_collectives.h
+│   ├── plugin.h
+│   └── plugin_headers.h
+├── LICENSE
+├── Makefile
+├── report.pdf
+├── README.md
+├── setenv.sh
+├── slide.pdf
+├── src
+│   ├── graphviz.cpp
+│   ├── mpi_collectives.cpp
+│   └── plugin.cpp
+└── tests
+    ├── test-fail-1.c
+    ├── test-fail-2.c
+    ├── test-pass-1.c
+    └── test-pass-2.c
+```
+
+
+## Build GCC12 
+
+You need to build GCC 12.2.0 with plugins enabled to use this plugin. Before building GCC 12.2.0, some packages are necessary. If this is not done yet install *libgmp-dev*, *libmpc-dev* and *libmpfr-dev*. Once you got archive from the compiler, extract it. In source file folder, create a MYBUILD folder. Inside run following command : 
+```bash
+../configure --prefix=/home/<login>/GCC/gcc-10.2.0 --enable-languages=c,c++,fortran --enable-plugin --disable-bootstrap --disable-multilib
+```
+
+
+One the configuration stage done you need to to build GCC 12.2.0 and install it running :
+```bash
+make _j4 && make install
+```
+
 ## Setup
 
 Before building, configure your environment variables:
 
-1. Copy the template: `cp setenv.sh.template setenv.sh`
-2. Edit `setenv.sh` to set your local `GCC_ROOT` path.
-3. Source the file: `source setenv.sh`
+1. Edit `setenv.sh` to set your local `GCC_ROOT` path.
+2. Source the file: `source setenv.sh`
 
 ## Compilation
 
@@ -57,21 +97,12 @@ make dot2png
 
 ## Cleanup
 
-Remove compiled objects and test binaries:
+Remove all build artifacts, including `.dot` and `.png` files:
 
 ```bash
 make clean
 
 ```
-
-Remove all build artifacts, including `.dot` and `.png` files:
-
-```bash
-make cleanall
-
-```
-
-
 
 ## License
 

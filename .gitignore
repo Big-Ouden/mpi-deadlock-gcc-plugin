@@ -15,5 +15,3 @@ test-pass-2
 *.dot
 png/
 
-# Local environment setup (contains machine-specific paths)
-setenv.sh
