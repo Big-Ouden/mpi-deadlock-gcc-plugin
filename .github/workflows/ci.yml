@@ -5,6 +5,9 @@ on:
     branches: ["**"]
   pull_request:
 
+env:
+  GCC_ROOT: /opt/gcc-12.2.0
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -15,10 +18,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup GCC 12.2.0 environment
+        run: |
+          echo "$GCC_ROOT/bin" >> $GITHUB_PATH
+          echo "CC=$GCC_ROOT/bin/gcc"   >> $GITHUB_ENV
+          echo "CXX=$GCC_ROOT/bin/g++"  >> $GITHUB_ENV
+
       # ── Build ────────────────────────────────────────────────────────────────
 
       - name: Build plugin (libplugin.so)
-        # CC/CXX are already set by the Docker image via ENV
         run: make
 
       # ── Tests that MUST produce a warning ────────────────────────────────────
@@ -28,27 +36,23 @@ jobs:
           make build/test-fail-1 2>&1 | tee /tmp/fail1.log
           grep -q "can cause an invalid fork" /tmp/fail1.log \
             || { echo "FAIL: expected warning not found in test-fail-1"; exit 1; }
-          echo "PASS: warning detected in test-fail-1"
 
       - name: test-fail-2 (expect deadlock warning)
         run: |
           make build/test-fail-2 2>&1 | tee /tmp/fail2.log
           grep -q "can cause an invalid fork" /tmp/fail2.log \
             || { echo "FAIL: expected warning not found in test-fail-2"; exit 1; }
-          echo "PASS: warning detected in test-fail-2"
 
       # ── Tests that MUST NOT produce a warning ────────────────────────────────
 
-      - name: test-pass-1 (expect clean compilation)
+      - name: test-pass-1 (expect no warning)
         run: |
           make build/test-pass-1 2>&1 | tee /tmp/pass1.log
-          grep -q "can cause an invalid fork" /tmp/pass1.log \
-            && { echo "FAIL: unexpected warning in test-pass-1"; exit 1; } || true
-          echo "PASS: no spurious warning in test-pass-1"
+          ! grep -q "can cause an invalid fork" /tmp/pass1.log \
+            || { echo "FAIL: unexpected warning in test-pass-1"; exit 1; }
 
-      - name: test-pass-2 (expect clean compilation)
+      - name: test-pass-2 (expect no warning)
         run: |
           make build/test-pass-2 2>&1 | tee /tmp/pass2.log
-          grep -q "can cause an invalid fork" /tmp/pass2.log \
-            && { echo "FAIL: unexpected warning in test-pass-2"; exit 1; } || true
-          echo "PASS: no spurious warning in test-pass-2"
+          ! grep -q "can cause an invalid fork" /tmp/pass2.log \
+            || { echo "FAIL: unexpected warning in test-pass-2"; exit 1; }
