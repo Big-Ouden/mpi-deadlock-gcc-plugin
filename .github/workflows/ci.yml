@@ -18,17 +18,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup GCC 12.2.0 and MPI environment
+      - name: Setup GCC 12.2.0 environment
         run: |
           echo "$GCC_ROOT/bin" >> $GITHUB_PATH
-          echo "CC=$GCC_ROOT/bin/gcc"   >> $GITHUB_ENV
-          echo "CXX=$GCC_ROOT/bin/g++"  >> $GITHUB_ENV
-          # Inject MPI include/lib paths into CFLAGS/LDFLAGS so the Makefile
-          # picks them up without modification (it uses $(CC) directly, not mpicc)
-          MPI_INC=$(mpicc --showme:compile)
-          MPI_LIB=$(mpicc --showme:link)
-          echo "CFLAGS=-g -O3 -Iinclude $MPI_INC" >> $GITHUB_ENV
-          echo "LDFLAGS=$MPI_LIB"                  >> $GITHUB_ENV
+          echo "CC=$GCC_ROOT/bin/gcc"  >> $GITHUB_ENV
+          echo "CXX=$GCC_ROOT/bin/g++" >> $GITHUB_ENV
 
       # ── Build ────────────────────────────────────────────────────────────────
 
@@ -36,16 +30,18 @@ jobs:
         run: make
 
       # ── Tests that MUST produce a warning ────────────────────────────────────
+      # MPICC is used as the compiler wrapper for test targets (see Makefile).
+      # It resolves mpi.h and links libmpi automatically.
 
       - name: test-fail-1 (expect deadlock warning)
         run: |
-          make build/test-fail-1 2>&1 | tee /tmp/fail1.log
+          make build/test-fail-1 MPICC=mpicc 2>&1 | tee /tmp/fail1.log
           grep -q "can cause an invalid fork" /tmp/fail1.log \
             || { echo "FAIL: expected warning not found in test-fail-1"; exit 1; }
 
       - name: test-fail-2 (expect deadlock warning)
         run: |
-          make build/test-fail-2 2>&1 | tee /tmp/fail2.log
+          make build/test-fail-2 MPICC=mpicc 2>&1 | tee /tmp/fail2.log
           grep -q "can cause an invalid fork" /tmp/fail2.log \
             || { echo "FAIL: expected warning not found in test-fail-2"; exit 1; }
 
@@ -53,12 +49,12 @@ jobs:
 
       - name: test-pass-1 (expect no warning)
         run: |
-          make build/test-pass-1 2>&1 | tee /tmp/pass1.log
+          make build/test-pass-1 MPICC=mpicc 2>&1 | tee /tmp/pass1.log
           ! grep -q "can cause an invalid fork" /tmp/pass1.log \
             || { echo "FAIL: unexpected warning in test-pass-1"; exit 1; }
 
       - name: test-pass-2 (expect no warning)
         run: |
-          make build/test-pass-2 2>&1 | tee /tmp/pass2.log
+          make build/test-pass-2 MPICC=mpicc 2>&1 | tee /tmp/pass2.log
           ! grep -q "can cause an invalid fork" /tmp/pass2.log \
             || { echo "FAIL: unexpected warning in test-pass-2"; exit 1; }

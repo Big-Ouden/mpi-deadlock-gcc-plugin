@@ -63,7 +63,7 @@ tests: $(TESTS)
 
 # Generic build rule for tests inside the tests/ directory
 $(BUILDDIR)/test-%: tests/test-%.c $(EXE) | $(BUILDDIR)
-	$(CC) $< $(CFLAGS) -o $@ -fplugin=./$(EXE) -lmpi
+	$(MPICC) $< $(CFLAGS) -o $@ -fplugin=./$(EXE)
 	
 ##########
 ## DOTS ##
