@@ -18,11 +18,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup GCC 12.2.0 environment
+      - name: Setup GCC 12.2.0 and MPI environment
         run: |
           echo "$GCC_ROOT/bin" >> $GITHUB_PATH
           echo "CC=$GCC_ROOT/bin/gcc"   >> $GITHUB_ENV
           echo "CXX=$GCC_ROOT/bin/g++"  >> $GITHUB_ENV
+          # Inject MPI include/lib paths into CFLAGS/LDFLAGS so the Makefile
+          # picks them up without modification (it uses $(CC) directly, not mpicc)
+          MPI_INC=$(mpicc --showme:compile)
+          MPI_LIB=$(mpicc --showme:link)
+          echo "CFLAGS=-g -O3 -Iinclude $MPI_INC" >> $GITHUB_ENV
+          echo "LDFLAGS=$MPI_LIB"                  >> $GITHUB_ENV
 
       # ── Build ────────────────────────────────────────────────────────────────
 
