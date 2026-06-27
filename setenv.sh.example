@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export GCC_ROOT="/path/to/your/gcc-12.2.0"
+export GCC_ROOT="/home/bigouden/Documents/cours/coav/tools/gcc-12.2.0"
 
 export CC="$GCC_ROOT/bin/gcc"
 export CXX="$GCC_ROOT/bin/g++"

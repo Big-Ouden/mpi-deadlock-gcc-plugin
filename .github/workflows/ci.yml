@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository }}/gcc12-mpi:latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Build ────────────────────────────────────────────────────────────────
+
+      - name: Build plugin (libplugin.so)
+        # CC/CXX are already set by the Docker image via ENV
+        run: make
+
+      # ── Tests that MUST produce a warning ────────────────────────────────────
+
+      - name: test-fail-1 (expect deadlock warning)
+        run: |
+          make build/test-fail-1 2>&1 | tee /tmp/fail1.log
+          grep -q "can cause an invalid fork" /tmp/fail1.log \
+            || { echo "FAIL: expected warning not found in test-fail-1"; exit 1; }
+          echo "PASS: warning detected in test-fail-1"
+
+      - name: test-fail-2 (expect deadlock warning)
+        run: |
+          make build/test-fail-2 2>&1 | tee /tmp/fail2.log
+          grep -q "can cause an invalid fork" /tmp/fail2.log \
+            || { echo "FAIL: expected warning not found in test-fail-2"; exit 1; }
+          echo "PASS: warning detected in test-fail-2"
+
+      # ── Tests that MUST NOT produce a warning ────────────────────────────────
+
+      - name: test-pass-1 (expect clean compilation)
+        run: |
+          make build/test-pass-1 2>&1 | tee /tmp/pass1.log
+          grep -q "can cause an invalid fork" /tmp/pass1.log \
+            && { echo "FAIL: unexpected warning in test-pass-1"; exit 1; } || true
+          echo "PASS: no spurious warning in test-pass-1"
+
+      - name: test-pass-2 (expect clean compilation)
+        run: |
+          make build/test-pass-2 2>&1 | tee /tmp/pass2.log
+          grep -q "can cause an invalid fork" /tmp/pass2.log \
+            && { echo "FAIL: unexpected warning in test-pass-2"; exit 1; } || true
+          echo "PASS: no spurious warning in test-pass-2"
