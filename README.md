@@ -1,6 +1,6 @@
 # MPI Deadlock GCC Plugin
 
-A GCC compiler plugin (v12.2.0) designed to detect potential deadlocks in MPI applications[cite: 1]. It analyzes the Control Flow Graph (CFG) to warn developers about invalid forks when evaluating MPI collectives.
+A GCC compiler plugin (v12.2.0) designed to detect potential deadlocks in MPI applications. It analyzes the Control Flow Graph (CFG) to warn developers about invalid forks when evaluating MPI collectives.
 
 <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/Big-Ouden/mpi-deadlock-gcc-plugin/ci.yml?branch=main&style=for-the-badge">  <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/Big-Ouden/mpi-deadlock-gcc-plugin/build-image.yml?branch=main&style=for-the-badge&label=Image%20Build">  <img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/Big-Ouden/mpi-deadlock-gcc-plugin?style=for-the-badge">   
 <img alt="GitHub repo size" src="https://img.shields.io/github/repo-size/Big-Ouden/mpi-deadlock-gcc-plugin?style=for-the-badge">  <img alt="GitHub License" src="https://img.shields.io/github/license/Big-Ouden/mpi-deadlock-gcc-plugin?style=for-the-badge">  
@@ -10,7 +10,7 @@ A GCC compiler plugin (v12.2.0) designed to detect potential deadlocks in MPI ap
 
 ## Prerequisites
 
-* **GCC/G++:** Version 12.2.0[cite: 1].
+* **GCC/G++:** Version 12.2.0.
 * **MPI:** `mpicc` must be installed and in your PATH.
 * **Graphviz:** Optional, used to generate `.dot` and `.png` visual representations of the CFGs.
 
@@ -65,7 +65,7 @@ Before building, configure your environment variables:
 
 ## Compilation
 
-Build the plugin (`libplugin.so`) with the following command[cite: 1]:
+Build the plugin (`libplugin.so`) with the following command:
 
 ```bash
 make
@@ -78,8 +78,8 @@ Run tests to verify the plugin's behavior. The compiled test binaries will be ge
 
 ```bash
 # Compile specific tests
-make test-fail-1  # Should trigger warnings[cite: 1]
-make test-pass-1  # Should compile without warnings[cite: 1]
+make test-fail-1  # Should trigger warnings
+make test-pass-1  # Should compile without warnings
 
 # Compile all available tests from the tests/ directory
 make tests
