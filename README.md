@@ -53,7 +53,7 @@ You need to build GCC 12.2.0 with plugins enabled to use this plugin. Before bui
 
 One the configuration stage done you need to to build GCC 12.2.0 and install it running :
 ```bash
-make _j4 && make install
+make -j4 && make install
 ```
 
 ## Setup
