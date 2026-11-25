@@ -8,6 +8,17 @@ A GCC compiler plugin (v12.2.0) designed to detect potential deadlocks in MPI ap
 
 
 
+## Quick start with Nix (recommended)
+
+The flake provides GCC 12.2.0, OpenMPI, Graphviz and make, so nothing else needs to be installed (requires Nix with flakes enabled):
+
+```bash
+nix develop        # shell with gcc 12.2.0, mpicc, dot and make
+make && make tests
+```
+
+`nix build` builds `libplugin.so` into `result/lib/`.
+
 ## Prerequisites
 
 * **GCC/G++:** Version 12.2.0.
