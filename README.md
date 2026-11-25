@@ -5,19 +5,16 @@ A GCC compiler plugin (v12.2.0) designed to detect potential deadlocks in MPI ap
 <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/Big-Ouden/mpi-deadlock-gcc-plugin/ci.yml?branch=main&style=for-the-badge">  <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/Big-Ouden/mpi-deadlock-gcc-plugin/build-image.yml?branch=main&style=for-the-badge&label=Image%20Build">  <img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/Big-Ouden/mpi-deadlock-gcc-plugin?style=for-the-badge">   
 <img alt="GitHub repo size" src="https://img.shields.io/github/repo-size/Big-Ouden/mpi-deadlock-gcc-plugin?style=for-the-badge">  <img alt="GitHub License" src="https://img.shields.io/github/license/Big-Ouden/mpi-deadlock-gcc-plugin?style=for-the-badge">  
 
-
-
-
 ## Quick start with Nix (recommended)
 
 The flake provides GCC 12.2.0, OpenMPI, Graphviz and make, so nothing else needs to be installed (requires Nix with flakes enabled):
 
 ```bash
 nix develop        # shell with gcc 12.2.0, mpicc, dot and make
-make && make tests
+make && make check
 ```
 
-`nix build` builds `libplugin.so` into `result/lib/`.
+`nix build` builds the plugin into `result/lib/` and runs the test suite. `nix flake check` does the same.
 
 ## Prerequisites
 
@@ -29,22 +26,23 @@ make && make tests
 
 ```bash
 .
+├── flake.lock
+├── flake.nix
 ├── include
-│   ├── graphviz.h
-│   ├── MPI_collectives.def
-│   ├── mpi_collectives.h
-│   ├── plugin.h
-│   └── plugin_headers.h
+│   ├── graphviz.h
+│   ├── MPI_collectives.def
+│   ├── mpi_collectives.h
+│   ├── plugin.h
+│   └── plugin_headers.h
 ├── LICENSE
 ├── Makefile
 ├── report.pdf
 ├── README.md
-├── setenv.sh
 ├── slide.pdf
 ├── src
-│   ├── graphviz.cpp
-│   ├── mpi_collectives.cpp
-│   └── plugin.cpp
+│   ├── graphviz.cpp
+│   ├── mpi_collectives.cpp
+│   └── plugin.cpp
 └── tests
     ├── test-fail-1.c
     ├── test-fail-2.c
@@ -52,61 +50,48 @@ make && make tests
     └── test-pass-2.c
 ```
 
+## Build GCC 12.2.0
 
-
-## Build GCC12 
-
-You need to build GCC 12.2.0 with plugins enabled to use this plugin. Before building GCC 12.2.0, some packages are necessary. If this is not done yet install *libgmp-dev*, *libmpc-dev* and *libmpfr-dev*. Once you got archive from the compiler, extract it. In source file folder, create a MYBUILD folder. Inside run following command : 
+Skip this section if you use Nix. Otherwise, you need to build GCC 12.2.0 with plugins enabled to use this plugin. Before building GCC 12.2.0, some packages are necessary. If this is not done yet install *libgmp-dev*, *libmpc-dev* and *libmpfr-dev*. Once you have the archive from GNU, extract it. In the source folder, create a `MYBUILD` folder. Inside it, run the following command:
 ```bash
-../configure --prefix=/home/<login>/GCC/gcc-10.2.0 --enable-languages=c,c++,fortran --enable-plugin --disable-bootstrap --disable-multilib
+../configure --prefix=/home/<login>/GCC/gcc-12.2.0 --enable-languages=c,c++ --enable-plugin --disable-bootstrap --disable-multilib
 ```
 
-
-One the configuration stage done you need to to build GCC 12.2.0 and install it running :
+Once the configuration stage is done, build GCC 12.2.0 and install it:
 ```bash
 make -j4 && make install
 ```
 
-## Setup
-
-Before building, configure your environment variables:
-
-1. Edit `setenv.sh` to set your local `GCC_ROOT` path.
-2. Source the file: `source setenv.sh`
-
 ## Compilation
 
-Build the plugin (`libplugin.so`) with the following command:
+Build the plugin (`build/libplugin.so`). Without Nix, point `CC`/`CXX` at your GCC 12.2.0 install and use the matching `mpicc` for the tests:
 
 ```bash
-make
-
+make CC=/path/to/gcc-12.2.0/bin/gcc CXX=/path/to/gcc-12.2.0/bin/g++
 ```
+
+With Nix or with GCC 12.2.0 on your `PATH`, plain `make` is enough.
 
 ## Testing
 
-Run tests to verify the plugin's behavior. The compiled test binaries will be generated in the root directory.
+`make check` compiles every test program in `tests/` against the plugin and verifies the result: `test-fail-*` must print a warning and `test-pass-*` must not. It exits non-zero on any failure.
 
 ```bash
-# Compile specific tests
-make test-fail-1  # Should trigger warnings
-make test-pass-1  # Should compile without warnings
-
-# Compile all available tests from the tests/ directory
-make tests
-
+make check MPICC=mpicc
 ```
+
+To build a single test, run for example `make build/test-fail-1 MPICC=mpicc`. Test binaries are written to `build/`.
 
 ## Debug & Visualization
 
-Generate Graphviz (`.dot`) representations of the CFG:
+`make debug` rebuilds the plugin with the CFG dump enabled. Compiling a test then writes one Graphviz (`.dot`) file per function into `build/`:
 
 ```bash
 make debug
-
+make build/test-fail-1 MPICC=mpicc
 ```
 
-Convert the generated `.dot` files into PNG format (saved in the `png/` directory):
+Convert the generated `.dot` files into PNG format (saved in `build/png/`):
 
 ```bash
 make dot2png
