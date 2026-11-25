@@ -6,61 +6,24 @@ void sanitize(char* s){
   for (int i = 0 ; s[i] != '\0'; i++){
     if (s[i] == '/'){
       s[i] = '-';
-    } 
+    }
   }
 }
 
 
 /* Build a filename (as a string) based on function name in a specific dir*/
 char *cfgviz_generate_filename(function *fun, const char *suffix) {
-  char *target_filename;
-  char *tmp;
+  char tmp[1024];
+  char *target_filename = (char *)xmalloc(2048 * sizeof(char));
 
-  target_filename = (char *)xmalloc(2048 * sizeof(char));
-  tmp = (char *)xmalloc(2048 * sizeof(char));
-
-  snprintf(tmp, 1024, "%s_%s_%d_%s.dot",current_function_name(),
+  snprintf(tmp, sizeof(tmp), "%s_%s_%d_%s.dot", function_name(fun),
            LOCATION_FILE(fun->function_start_locus),
            LOCATION_LINE(fun->function_start_locus), suffix);
   sanitize(tmp);
-  snprintf(target_filename, 1024, "%s/%s", "build", tmp);
+  snprintf(target_filename, 2048, "%s/%s", "build", tmp);
 
   return target_filename;
 }
-
-/* Dump the graphviz representation of function 'fun' in file 'out' */
-// void cfgviz_internal_dump(function *fun, FILE *out) {
-//
-//   // Print the header line and open the main graph
-//   fprintf(out, "Digraph G{\n");
-//
-//   basic_block bb;
-//   FOR_ALL_BB_FN(bb, fun) {
-//     int index = bb->index;
-//     edge e;
-//     edge_iterator ei;
-//     int *collective = (int *)bb->aux;
-//     int code = LAST_AND_UNUSED_MPI_COLLECTIVE_CODE;
-//     if (collective != NULL) {
-//       code = *collective;
-//     }
-//     fprintf(stdout, "[DEBUG] code: %d\n", code);
-//
-//     fprintf(out, "N%d [label=\"Node %d\n %s \" shape=ellipse]\n", index, index,
-//             mpi_collective_name[code]);
-//     FOR_EACH_EDGE(e, ei, bb->succs) {
-//       basic_block src = e->src;
-//       basic_block dst = e->dest;
-//
-//       fprintf(out, "N%d -> N%d [color=red label=\"\"]\n", src->index,
-//               dst->index);
-//     }
-//   }
-//
-//   // Close the main graph
-//   fprintf(out, "}\n");
-// }
-
 
 /* First MPI collective called in 'bb', or LAST_AND_UNUSED if there is none.
    split_cfg() guarantees at most one collective per block. */
@@ -93,13 +56,14 @@ static void dump_edges(basic_block bb, FILE *out) {
   }
 }
 
+/* Dump the graphviz representation of function 'fun' in file 'out' */
 void cfgviz_internal_dump(function *fun, FILE *out) {
 
   // Print the header line and open the main graph
   fprintf(out, "Digraph G{\n");
   basic_block bb;
 
-  // Entry and exit blocks are not part of FOR_ALL_BB_FN
+  // FOR_EACH_BB_FN skips the entry and exit blocks, so declare them here
   fprintf(out, "N%d [label=\"ENTRY\" shape=ellipse]\n", ENTRY_BLOCK_PTR_FOR_FN(fun)->index);
   fprintf(out, "N%d [label=\"EXIT\" shape=ellipse]\n", EXIT_BLOCK_PTR_FOR_FN(fun)->index);
 
@@ -134,9 +98,15 @@ void cfgviz_dump(function *fun, const char *suffix) {
   target_filename = cfgviz_generate_filename(fun, suffix);
 
   printf("[GRAPHVIZ] Generating CFG of function %s in file <%s>\n",
-         current_function_name(), target_filename);
+         function_name(fun), target_filename);
 
   out = fopen(target_filename, "w");
+  if (out == NULL) {
+    fprintf(stderr, "[GRAPHVIZ] Cannot open %s for writing (does build/ exist?)\n",
+            target_filename);
+    free(target_filename);
+    return;
+  }
 
   cfgviz_internal_dump(fun, out);
 
