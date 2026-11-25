@@ -13,7 +13,7 @@
 int plugin_is_GPL_compatible;
 
 int plugin_init(struct plugin_name_args *plugin_info,
-        struct plugin_gcc_version *versiovn);
+        struct plugin_gcc_version *version);
 
 const pass_data my_pass_data {
     GIMPLE_PASS,       // Type
