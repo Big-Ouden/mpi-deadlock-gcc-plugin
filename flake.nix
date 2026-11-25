@@ -22,11 +22,23 @@
           nativeBuildInputs = [ pkgs.gnumake pkgs.openmpi ];
           buildInputs = [ pkgs.gmp pkgs.mpfr pkgs.libmpc ];
 
+          # Make mpicc (used by 'make check') use the same GCC as the plugin
+          OMPI_CC = "gcc";
+          OMPI_CXX = "g++";
+
           # The Makefile writes into build/, so install the .so from there
           buildPhase = ''
             runHook preBuild
             make CC=gcc CXX=g++
             runHook postBuild
+          '';
+
+          # Runs 'make check': the tests must warn or not warn as expected
+          doCheck = true;
+          checkPhase = ''
+            runHook preCheck
+            make check CC=gcc CXX=g++
+            runHook postCheck
           '';
 
           installPhase = ''
@@ -36,6 +48,11 @@
             runHook postInstall
           '';
         };
+      });
+
+      # 'nix flake check' builds the package, which runs the test suite
+      checks = forAllSystems (pkgs: {
+        default = self.packages.${pkgs.system}.default;
       });
 
       # Development shell: GCC 12.2.0 with plugin support, MPI, Graphviz and make.
