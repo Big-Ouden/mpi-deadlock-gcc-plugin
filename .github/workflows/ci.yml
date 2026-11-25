@@ -5,30 +5,27 @@ on:
     branches: ["main"]
   pull_request:
 
-env:
-  GCC_ROOT: /opt/gcc-12.2.0
-
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/big-ouden/gcc12-mpi:latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup GCC 12.2.0 environment
-        run: |
-          echo "$GCC_ROOT/bin" >> $GITHUB_PATH
-          echo "CC=$GCC_ROOT/bin/gcc"  >> $GITHUB_ENV
-          echo "CXX=$GCC_ROOT/bin/g++" >> $GITHUB_ENV
+      # The flake pins GCC 12.2.0, OpenMPI and Graphviz, so no container image
+      # is needed.
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
 
+      # `nix build` also runs the test suite (the package checkPhase)
       - name: Build plugin (libplugin.so)
-        run: make
+        run: nix build --print-build-logs
 
       # `make check` compiles every test and fails if a test-fail-* file does
-      # not warn or a test-pass-* file warns. MPICC is the compiler wrapper
-      # used for the test programs (it resolves mpi.h and links libmpi).
+      # not warn or a test-pass-* file warns.
       - name: Check tests (fail tests warn, pass tests do not)
-        run: make check MPICC=mpicc
+        run: nix develop --command make check MPICC=mpicc
