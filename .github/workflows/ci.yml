@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches: ["main"]
   pull_request:
 
 env:
@@ -24,37 +24,11 @@ jobs:
           echo "CC=$GCC_ROOT/bin/gcc"  >> $GITHUB_ENV
           echo "CXX=$GCC_ROOT/bin/g++" >> $GITHUB_ENV
 
-      # ── Build ────────────────────────────────────────────────────────────────
-
       - name: Build plugin (libplugin.so)
         run: make
 
-      # ── Tests that MUST produce a warning ────────────────────────────────────
-      # MPICC is used as the compiler wrapper for test targets (see Makefile).
-      # It resolves mpi.h and links libmpi automatically.
-
-      - name: test-fail-1 (expect deadlock warning)
-        run: |
-          make build/test-fail-1 MPICC=mpicc 2>&1 | tee /tmp/fail1.log
-          grep -q "can cause an invalid fork" /tmp/fail1.log \
-            || { echo "FAIL: expected warning not found in test-fail-1"; exit 1; }
-
-      - name: test-fail-2 (expect deadlock warning)
-        run: |
-          make build/test-fail-2 MPICC=mpicc 2>&1 | tee /tmp/fail2.log
-          grep -q "can cause an invalid fork" /tmp/fail2.log \
-            || { echo "FAIL: expected warning not found in test-fail-2"; exit 1; }
-
-      # ── Tests that MUST NOT produce a warning ────────────────────────────────
-
-      - name: test-pass-1 (expect no warning)
-        run: |
-          make build/test-pass-1 MPICC=mpicc 2>&1 | tee /tmp/pass1.log
-          ! grep -q "can cause an invalid fork" /tmp/pass1.log \
-            || { echo "FAIL: unexpected warning in test-pass-1"; exit 1; }
-
-      - name: test-pass-2 (expect no warning)
-        run: |
-          make build/test-pass-2 MPICC=mpicc 2>&1 | tee /tmp/pass2.log
-          ! grep -q "can cause an invalid fork" /tmp/pass2.log \
-            || { echo "FAIL: unexpected warning in test-pass-2"; exit 1; }
+      # `make check` compiles every test and fails if a test-fail-* file does
+      # not warn or a test-pass-* file warns. MPICC is the compiler wrapper
+      # used for the test programs (it resolves mpi.h and links libmpi).
+      - name: Check tests (fail tests warn, pass tests do not)
+        run: make check MPICC=mpicc
