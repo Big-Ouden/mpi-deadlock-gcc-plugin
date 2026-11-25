@@ -2,7 +2,7 @@
 
 A GCC compiler plugin (v12.2.0) designed to detect potential deadlocks in MPI applications. It analyzes the Control Flow Graph (CFG) to warn developers about invalid forks when evaluating MPI collectives.
 
-<img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/Big-Ouden/mpi-deadlock-gcc-plugin/ci.yml?branch=main&style=for-the-badge">  <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/Big-Ouden/mpi-deadlock-gcc-plugin/build-image.yml?branch=main&style=for-the-badge&label=Image%20Build">  <img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/Big-Ouden/mpi-deadlock-gcc-plugin?style=for-the-badge">   
+<img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/Big-Ouden/mpi-deadlock-gcc-plugin/ci.yml?branch=main&style=for-the-badge">  <img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/Big-Ouden/mpi-deadlock-gcc-plugin?style=for-the-badge">   
 <img alt="GitHub repo size" src="https://img.shields.io/github/repo-size/Big-Ouden/mpi-deadlock-gcc-plugin?style=for-the-badge">  <img alt="GitHub License" src="https://img.shields.io/github/license/Big-Ouden/mpi-deadlock-gcc-plugin?style=for-the-badge">  
 
 ## Quick start with Nix (recommended)
