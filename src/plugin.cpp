@@ -109,17 +109,18 @@ void split_cfg() {
   basic_block bb;
 
   FOR_ALL_BB_FN(bb, cfun) {
-    int n = 0;
+    bool seen_collective = false;
     for (auto gsi = gsi_start_bb(bb); !gsi_end_p(gsi); gsi_next(&gsi)) {
-      gimple *stmt = gsi_stmt(gsi);
-      enum mpi_collective_code code = get_mpi_call_code(stmt);
-      if (code != LAST_AND_UNUSED_MPI_COLLECTIVE_CODE)
-        n++;
-      if (n > 1) {
+      if (get_mpi_call_code(gsi_stmt(gsi)) == LAST_AND_UNUSED_MPI_COLLECTIVE_CODE)
+        continue;
+      if (seen_collective) {
+        // Split after the previous statement: the second collective starts
+        // the new block. Stop here, the new block is visited by FOR_ALL_BB_FN.
         gsi_prev(&gsi);
-        stmt = gsi_stmt(gsi);
-        split_block(bb, stmt);
+        split_block(bb, gsi_stmt(gsi));
+        break;
       }
+      seen_collective = true;
     }
   }
 }
